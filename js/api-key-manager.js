@@ -106,9 +106,18 @@ async function validateAndFetchModels(provider, key, loadModelsCallback) {
         updateApiKeyStatus(provider, "Invalid API key", "error");
       }
     } else if (provider === "gemini") {
-      updateApiKeyStatus(provider, "API key is valid", "success");
-      if (loadModelsCallback) {
-        loadModelsCallback();
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`,
+      );
+      if (response.ok) {
+        updateApiKeyStatus(provider, "API key is valid", "success");
+        if (loadModelsCallback) loadModelsCallback();
+      } else if (response.status === 429) {
+        updateApiKeyStatus(provider, "API quota or rate limit exceeded", "error");
+      } else if (response.status === 400 || response.status === 401 || response.status === 403) {
+        updateApiKeyStatus(provider, "Invalid or unauthorized API key", "error");
+      } else {
+        updateApiKeyStatus(provider, `Gemini validation failed (${response.status})`, "error");
       }
     }
   } catch (error) {

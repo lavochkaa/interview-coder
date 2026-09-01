@@ -9,6 +9,7 @@ const toastManager = require("./toast-manager");
 const log = require("electron-log");
 const { createUIPrompt } = require("./ui-implementation-prompt");
 const { createDirectAnswerPrompt } = require("./direct-answer-prompt");
+const { getResponseLanguageInstruction } = require("./language-instructions");
 
 // Store active request controllers for cancellation
 let activeRequestControllers = new Set();
@@ -88,6 +89,7 @@ function createPrompt(screenshotsCount, language = "en") {
     ja: "Japanese",
     ko: "Korean",
     zh: "Chinese",
+    ru: "Russian",
   };
 
   if (language === "en" || !languageMap[language]) {
@@ -448,7 +450,8 @@ async function processScreenshotsForUI(
     }
 
     // Use the specialized UI implementation prompt
-    const promptText = createUIPrompt(screenshots.length);
+    const languageInstruction = getResponseLanguageInstruction(configManager.getResponseLanguage());
+    const promptText = [createUIPrompt(screenshots.length), languageInstruction].filter(Boolean).join("\n\n");
     log.info("UI implementation prompt created for", screenshots.length, "screenshots");
 
     const messages = [{ type: "text", text: promptText }];

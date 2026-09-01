@@ -41,6 +41,7 @@ function createDirectAnswerPrompt(screenshotsCount, language = "en") {
     ja: "Japanese",
     ko: "Korean",
     zh: "Chinese",
+    ru: "Russian",
   };
 
   if (language === "en" || !languageMap[language]) {

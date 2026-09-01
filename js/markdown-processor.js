@@ -154,7 +154,7 @@ async function processMarkdown(markdown) {
     return tempWrapper.innerHTML;
   } catch (err) {
     console.error("Error in markdown processing:", err);
-    return `<p class="error-message">Error processing markdown: ${err.message}</p>`;
+    return '<p class="error-message">Error processing markdown. The plain response remains available in logs.</p>';
   }
 }
 
@@ -276,4 +276,4 @@ module.exports = {
     rehypePrismPlus,
     rehypeFormat
   }
-}; 
+};

@@ -46,6 +46,11 @@ window.ipcRenderer = ipcRenderer;
 async function loadCurrentSettings() {
   try {
     currentSettings = await ipcRenderer.invoke(IPC_CHANNELS.GET_CURRENT_SETTINGS);
+    window.currentSettings = currentSettings;
+    if (currentSettings.configError) {
+      messageDiv.textContent = currentSettings.configError;
+      messageDiv.className = "status error";
+    }
   } catch (error) {
     log.error("Error getting current settings:", error.message);
     // Set default settings if handler is not registered
@@ -55,6 +60,7 @@ async function loadCurrentSettings() {
     messageDiv.textContent = "Settings system not fully initialized. Using default configuration.";
     messageDiv.className = "status warning";
   }
+  window.currentSettings = currentSettings;
 
   // Set UI based on current settings
   // Update radio buttons and label styling
@@ -564,8 +570,11 @@ saveBtn.addEventListener("click", async () => {
   try {
     // Update settings through the IPC channel to be persisted in the main process
     log.info("Sending UPDATE_MODEL_SETTINGS IPC message...");
-    ipcRenderer.send(IPC_CHANNELS.UPDATE_MODEL_SETTINGS, settings);
-    log.info("IPC message sent successfully.");
+    const saveResult = await ipcRenderer.invoke(IPC_CHANNELS.UPDATE_MODEL_SETTINGS, settings);
+    if (!saveResult || !saveResult.success) {
+      throw new Error(saveResult?.error || "Unknown configuration error");
+    }
+    log.info("Settings saved successfully.");
 
     // Show success message
     messageDiv.textContent = "Settings saved!";
@@ -651,28 +660,33 @@ function setupKeyboardShortcuts() {
 
 // Setup API key input handlers
 function setupApiKeyInputs() {
+  const validationTimers = new Map();
+  const scheduleValidation = (provider, key, callback) => {
+    clearTimeout(validationTimers.get(provider));
+    validationTimers.set(
+      provider,
+      setTimeout(() => apiKeyManager.validateAndFetchModels(provider, key, callback), 600),
+    );
+  };
+
+  const prepareKeyInput = (input, provider) => {
+    input.addEventListener("focus", () => {
+      if (input.value === apiKeyManager.maskApiKey(API_KEYS[provider].key)) input.value = "";
+    });
+    input.addEventListener("blur", () => {
+      if (API_KEYS[provider].key) input.value = apiKeyManager.maskApiKey(API_KEYS[provider].key);
+    });
+  };
+
   // Setup API key input for OpenAI
   const openaiApiKeyInput = document.getElementById(API_KEYS.openai.inputId);
   if (openaiApiKeyInput) {
+    prepareKeyInput(openaiApiKeyInput, "openai");
     openaiApiKeyInput.addEventListener("input", (e) => {
       const key = e.target.value.trim();
       if (key) {
         // Store the full key
         API_KEYS.openai.key = key;
-        // Also update gemini key with the same value for consistency
-        API_KEYS.gemini.key = key;
-
-        // Mask the key in the input
-        const maskedKey = apiKeyManager.maskApiKey(key);
-        if (openaiApiKeyInput.value !== maskedKey) {
-          openaiApiKeyInput.value = maskedKey;
-        }
-
-        // Update gemini input field if it exists
-        const geminiApiKeyInput = document.getElementById(API_KEYS.gemini.inputId);
-        if (geminiApiKeyInput) {
-          geminiApiKeyInput.value = maskedKey;
-        }
 
         // Save the key
         apiKeyManager.saveApiKey("openai", key);
@@ -683,7 +697,7 @@ function setupApiKeyInputs() {
         // Auto-fetch models if key is long enough
         if (key.length >= 32) {
           // Minimum length for API keys
-          apiKeyManager.validateAndFetchModels("openai", key, () => {
+          scheduleValidation("openai", key, () => {
             // Nothing to do for OpenAI model fetching
           });
         }
@@ -696,25 +710,12 @@ function setupApiKeyInputs() {
   // Setup API key input for Gemini
   const geminiApiKeyInput = document.getElementById(API_KEYS.gemini.inputId);
   if (geminiApiKeyInput) {
+    prepareKeyInput(geminiApiKeyInput, "gemini");
     geminiApiKeyInput.addEventListener("input", (e) => {
       const key = e.target.value.trim();
       if (key) {
         // Store the full key
         API_KEYS.gemini.key = key;
-        // Also update openai key with the same value for consistency
-        API_KEYS.openai.key = key;
-
-        // Mask the key in the input
-        const maskedKey = apiKeyManager.maskApiKey(key);
-        if (geminiApiKeyInput.value !== maskedKey) {
-          geminiApiKeyInput.value = maskedKey;
-        }
-
-        // Update openai input field if it exists
-        const openaiApiKeyInput = document.getElementById(API_KEYS.openai.inputId);
-        if (openaiApiKeyInput) {
-          openaiApiKeyInput.value = maskedKey;
-        }
 
         // Save the key
         apiKeyManager.saveApiKey("gemini", key);
@@ -725,7 +726,7 @@ function setupApiKeyInputs() {
         // Auto-fetch models if key is long enough
         if (key.length >= 32) {
           // Minimum length for API keys
-          apiKeyManager.validateAndFetchModels("gemini", key, geminiProvider.loadGeminiModels);
+          scheduleValidation("gemini", key, geminiProvider.loadGeminiModels);
         }
       } else {
         apiKeyManager.updateApiKeyStatus("gemini", "API key is required", "error");
@@ -736,17 +737,12 @@ function setupApiKeyInputs() {
   // Setup API key input for Azure Foundry
   const azureFoundryApiKeyInput = document.getElementById(API_KEYS["azure-foundry"].inputId);
   if (azureFoundryApiKeyInput) {
+    prepareKeyInput(azureFoundryApiKeyInput, "azure-foundry");
     azureFoundryApiKeyInput.addEventListener("input", (e) => {
       const key = e.target.value.trim();
       if (key) {
         // Store the full key - Azure Foundry has its own separate key
         API_KEYS["azure-foundry"].key = key;
-
-        // Mask the key in the input
-        const maskedKey = apiKeyManager.maskApiKey(key);
-        if (azureFoundryApiKeyInput.value !== maskedKey) {
-          azureFoundryApiKeyInput.value = maskedKey;
-        }
 
         // Save the key
         apiKeyManager.saveApiKey("azure-foundry", key);

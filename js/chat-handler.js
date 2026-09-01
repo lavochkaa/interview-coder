@@ -1,5 +1,6 @@
 const axios = require("axios");
 const { AI_PROVIDERS } = require("./constants");
+const { getResponseLanguageInstruction } = require("./language-instructions");
 const { getUserDataPath } = require("./utils");
 const fs = require("fs");
 const { HarmCategory, HarmBlockThreshold } = require("@google/generative-ai");
@@ -69,6 +70,15 @@ class ChatHandler {
         if (currentSystemPrompt) {
           this.systemPrompts.set(windowId, currentSystemPrompt);
         }
+      }
+
+      const languageInstruction = getResponseLanguageInstruction(
+        this.configManager.getResponseLanguage(),
+      );
+      if (languageInstruction) {
+        currentSystemPrompt = currentSystemPrompt
+          ? `${currentSystemPrompt}\n\n${languageInstruction}`
+          : languageInstruction;
       }
 
       // Get the current AI provider and model from config

@@ -4,7 +4,7 @@ const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require("@googl
 const AnthropicFoundry = require("@anthropic-ai/foundry-sdk");
 const EventEmitter = require("events");
 const { AI_PROVIDERS } = require("./constants");
-const { getSettingsFilePath, saveApiKey } = require("./config-manager");
+const { getMergedSettings, saveApiKey } = require("./config-manager");
 const { generateWithAzureFoundry, getAzureFoundryModels, validateAzureFoundryConfig } = require("./azure-foundry-provider");
 const fs = require("fs");
 
@@ -31,68 +31,28 @@ function initializeFromConfig() {
   }
 
   try {
-    // Get the settings file path
-    const settingsFilePath = getSettingsFilePath();
+    const settings = getMergedSettings();
+    const apiKeys = settings.apiKeys || {};
 
-    // Check if settings file exists
-    if (fs.existsSync(settingsFilePath)) {
-      try {
-        const settingsData = fs.readFileSync(settingsFilePath, "utf8");
-        const settings = JSON.parse(settingsData);
-
-        // Check for provider-specific API keys first, then fall back to general apiKey
-        const apiKeys = settings.apiKeys || {};
-
-        try {
-          // Initialize based on current AI provider
-          if (settings.aiProvider === AI_PROVIDERS.OPENAI) {
-            const apiKey = apiKeys.openai || settings.apiKey;
-            if (apiKey) {
-              openai = new OpenAI({ apiKey });
-              console.log("OpenAI client initialized automatically from saved settings");
-            }
-          } else if (settings.aiProvider === AI_PROVIDERS.GEMINI) {
-            const apiKey = apiKeys.gemini || settings.apiKey;
-            if (apiKey) {
-              geminiAI = new GoogleGenerativeAI(apiKey);
-              console.log("Gemini AI client initialized automatically from saved settings");
-            }
-          } else if (settings.aiProvider === AI_PROVIDERS.AZURE_FOUNDRY) {
-            const apiKey = apiKeys["azure-foundry"];
-            if (apiKey) {
-              // Initialize Azure Foundry with saved endpoint if available
-              const endpoint = settings.azureEndpoint || AZURE_FOUNDRY_ENDPOINT;
-              azureFoundryClient = new AnthropicFoundry({
-                apiKey: apiKey,
-                baseURL: endpoint,
-                apiVersion: "2023-06-01",
-              });
-              AZURE_FOUNDRY_ENDPOINT = endpoint;
-              console.log("Azure Foundry client initialized automatically from saved settings");
-            }
-          } else if (settings.apiKey) {
-            // Initialize both by default with legacy apiKey for backward compatibility
-            openai = new OpenAI({ apiKey: settings.apiKey });
-            geminiAI = new GoogleGenerativeAI(settings.apiKey);
-            console.log("Both AI clients initialized with the same API key");
-          }
-        } catch (err) {
-          console.error("Error initializing AI clients from saved settings:", err);
-        }
-
-        // Update Ollama URL if available
-        if (settings.ollamaUrl) {
-          OLLAMA_BASE_URL = settings.ollamaUrl.replace("localhost", "127.0.0.1");
-        }
-
-        // Update Azure Foundry endpoint if available
-        if (settings.azureEndpoint) {
-          AZURE_FOUNDRY_ENDPOINT = settings.azureEndpoint;
-        }
-      } catch (parseError) {
-        console.error("Error parsing settings file:", parseError);
+    if (settings.aiProvider === AI_PROVIDERS.OPENAI) {
+      const apiKey = apiKeys.openai || settings.apiKey;
+      if (apiKey) openai = new OpenAI({ apiKey });
+    } else if (settings.aiProvider === AI_PROVIDERS.GEMINI) {
+      const apiKey = apiKeys.gemini || settings.apiKey;
+      if (apiKey) geminiAI = new GoogleGenerativeAI(apiKey);
+    } else if (settings.aiProvider === AI_PROVIDERS.AZURE_FOUNDRY) {
+      const apiKey = apiKeys["azure-foundry"];
+      if (apiKey && settings.azureEndpoint) {
+        azureFoundryClient = new AnthropicFoundry({
+          apiKey,
+          baseURL: settings.azureEndpoint,
+          apiVersion: "2023-06-01",
+        });
       }
     }
+
+    if (settings.ollamaUrl) OLLAMA_BASE_URL = settings.ollamaUrl.replace("localhost", "127.0.0.1");
+    if (settings.azureEndpoint) AZURE_FOUNDRY_ENDPOINT = settings.azureEndpoint;
 
     isInitialized = true;
     return { openai: !!openai, gemini: !!geminiAI, azureFoundry: !!azureFoundryClient };

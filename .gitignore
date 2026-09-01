@@ -15,6 +15,9 @@ release/
 .env.test
 .env.production
 
+# Local project settings and API keys
+interview-coder.config.json
+
 # OS specific files
 .DS_Store
 Thumbs.db

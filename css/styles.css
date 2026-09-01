@@ -111,10 +111,6 @@ body {
   border-radius: 12px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transform: translateZ(0);
-  will-change: contents;
-  backface-visibility: hidden;
-  contain: layout style paint;
   opacity: 0;  /* Start invisible */
   transition: opacity 300ms ease-in-out;  /* Smooth fade in */
 }
@@ -143,10 +139,6 @@ body.loaded {
   width: 100%;
   height: calc(100vh - 120px);
   position: relative;
-  transform: translateZ(0);
-  will-change: contents;
-  backface-visibility: hidden;
-  contain: content;
   isolation: isolate;
   overflow-y: auto;
 }
@@ -161,13 +153,8 @@ body.loaded {
   overflow-y: visible;
   height: auto;
   min-height: calc(100% - 40px);
-  will-change: contents, transform, opacity;
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-  transform: translateZ(0);
   position: relative;
   transition: none;
-  contain: content;
   isolation: isolate;
   padding-bottom: 60px;
 }
@@ -249,18 +236,18 @@ pre:before {
   }
 }
 
-#result-content::-webkit-scrollbar {
+#result-content-wrapper::-webkit-scrollbar {
   width: 5px;
   background: var(--bg-scrollbar);
   border-radius: 5px;
 }
 
-#result-content::-webkit-scrollbar-thumb {
+#result-content-wrapper::-webkit-scrollbar-thumb {
   background: var(--bg-scrollbar-thumb);
   border-radius: 5px;
 }
 
-#result-content::-webkit-scrollbar-thumb:hover {
+#result-content-wrapper::-webkit-scrollbar-thumb:hover {
   background: var(--bg-scrollbar-thumb-hover);
 }
 

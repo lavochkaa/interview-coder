@@ -39,8 +39,8 @@ Interview Coder is an advanced Electron application that leverages AI to analyze
   - Real-time streaming responses
 
 - 🌐 **Multilingual Support**
-  - Responses in 8 different languages
-  - English, Vietnamese, Spanish, French, German, Japanese, Korean, and Chinese
+  - Responses in 9 different languages
+  - English, Vietnamese, Spanish, French, German, Japanese, Korean, Chinese, and Russian
   - Language preferences persist across sessions
 
 - 🎯 **User-Friendly Interface**
@@ -89,6 +89,10 @@ No environment configuration is required to get started. API keys can be entered
 6. Choose your preferred response language
 7. Save settings and start using!
 
+Settings and provider-specific API keys are also synchronized to a local
+`interview-coder.config.json` in the project root. This file is ignored by Git because it contains
+secrets. Copy `interview-coder.config.example.json` if you prefer to configure it manually.
+
 ## 🔧 Using with Ollama
 
 1. Install Ollama from [ollama.ai](https://ollama.ai/)
@@ -119,6 +123,7 @@ Choose your preferred language for AI responses:
    - Japanese (日本語)
    - Korean (한국어)
    - Chinese (中文)
+   - Russian (Русский)
 4. Save settings to apply your language preference
 
 The application will generate all AI responses in your selected language, with solution approaches tailored to your language preference.
@@ -188,7 +193,8 @@ This removes quarantine attributes that might prevent the app from running prope
 - gpt-4-turbo
 
 ### Google Gemini
-- gemini-2.0-flash
+- gemini-2.5-flash
+- Other currently available Gemini models returned by the API
 
 ### Ollama
 - deepseek-r1:14b (recommended)
