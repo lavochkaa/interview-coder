@@ -41,7 +41,20 @@ All profiles instruct the model to:
 - preserve code, identifiers, commands, and error messages in their original form;
 - continue honoring the configured response language.
 
-Only `hard`, `custom`, or an explicit user request permits a complete source-file listing. Provider safety limits remain authoritative: when a model supports fewer output tokens than requested, the application uses the lower supported value.
+The current mandatory `Analyzing the Problem`, `My Thoughts`, `Implementation`, and `Complexity` template is removed from routine responses. It is the primary source of oversized output because it requires the model to repeat its reasoning, generate a complete implementation, analyze complexity, and duplicate code comments in two languages even for a simple error screenshot.
+
+The profile-specific formats are:
+
+- `easy`: answer or diagnosis first, no more than three short bullets, and at most 12 lines of code when code is necessary;
+- `medium`: diagnosis, brief reason, and a minimal patch or fragment, with at most 40 lines of code;
+- `hard`: structured explanation and complete code only when the task genuinely requires it;
+- `custom`: concise structure selected according to the available custom budget, without mandatory boilerplate sections.
+
+If a useful answer cannot fit the selected profile, the model must provide the most important diagnosis or next action and suggest switching to a larger profile. It must not begin a long source listing that will be cut off by the hard token cap.
+
+Code comments are not translated or duplicated. Explanatory prose follows the selected response language, while source code and technical identifiers remain unchanged.
+
+Only `hard`, `custom` with sufficient budget, or an explicit user request permits a complete source-file listing. Provider safety limits remain authoritative: when a model supports fewer output tokens than requested, the application uses the lower supported value.
 
 ## Configuration
 
@@ -70,6 +83,8 @@ A focused response-profile module will own:
 - resolution of the effective output-token limit.
 
 The config manager exposes the selected profile and resolved limit. Screenshot prompt builders and the split-view chat system prompt append the profile instruction alongside the language instruction.
+
+The existing monolithic screenshot prompt is split into a small task-context prompt and the selected response-profile instruction. Easy and Medium never inherit the legacy mandatory long-form response template. Hard may request deeper analysis, but it still avoids repeated reasoning and bilingual comments.
 
 Generation calls receive the effective limit explicitly rather than reading UI state. Each provider maps it to its native option:
 
@@ -121,9 +136,15 @@ Automated tests will cover:
 - interaction between Russian-language and response-profile instructions;
 - propagation of the effective limit into every provider, including streaming and fallback paths;
 - settings serialization and restoration;
-- chat controls opening split view, focusing the input, and starting a new conversation.
+- chat controls opening split view, focusing the input, and starting a new conversation;
+- absence of the legacy long-form section requirements in Easy and Medium prompts;
+- Easy output instructions limiting prose to three bullets and code to 12 lines;
+- Medium output instructions limiting code to 40 lines;
+- absence of bilingual code-comment requirements in every profile.
 
 Manual verification will confirm that ordinary error screenshots produce short answers, complex tasks can use a larger profile, split-view chat is accessible from the toolbar, and existing keyboard shortcuts continue to work.
+
+The supplied oversized-response sample is the regression reference: it contains 243 lines and 1,297 words for a syntax-error screenshot. With Easy selected, the equivalent response must contain only the likely syntax cause, the smallest corrective example, and at most two additional observations, all within the 256-token provider cap.
 
 ## Out of Scope
 
