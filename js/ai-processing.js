@@ -20,6 +20,7 @@ const {
   getOpenAIOutputOptions,
   getGeminiOutputOptions,
 } = require("./provider-output-options");
+const { logGeminiResponseDiagnostics } = require("./gemini-response-diagnostics");
 
 // Store active request controllers for cancellation
 let activeRequestControllers = new Set();
@@ -341,6 +342,7 @@ async function processChatMessage(window, messageHistory, systemPrompt) {
         },
       });
 
+      logGeminiResponseDiagnostics(result.response);
       response = { role: "assistant", content: result.response.text() };
     } else if (aiProvider === AI_PROVIDERS.OLLAMA) {
       // Use Ollama client

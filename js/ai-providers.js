@@ -10,6 +10,7 @@ const {
   getGeminiOutputOptions,
   getOllamaOutputOptions,
 } = require("./provider-output-options");
+const { logGeminiResponseDiagnostics } = require("./gemini-response-diagnostics");
 const fs = require("fs");
 
 axios.defaults.family = 4;
@@ -585,6 +586,9 @@ async function generateWithGemini(messages, model, streaming = false, maxOutputT
             emitter.emit("chunk", chunkText);
           }
 
+          const finalResponse = await streamingResponse.response;
+          logGeminiResponseDiagnostics(finalResponse);
+
           // Emit completion event
           emitter.emit("complete", fullResponse);
         } catch (error) {
@@ -607,6 +611,7 @@ async function generateWithGemini(messages, model, streaming = false, maxOutputT
         safetySettings,
       });
 
+      logGeminiResponseDiagnostics(response.response);
       return response.response.text();
     }
   } catch (error) {

@@ -7,6 +7,7 @@ const {
   getOllamaOutputOptions,
   getOpenAIOutputOptions,
 } = require("./provider-output-options");
+const { logGeminiResponseDiagnostics } = require("./gemini-response-diagnostics");
 const { getUserDataPath } = require("./utils");
 const fs = require("fs");
 const { HarmCategory, HarmBlockThreshold } = require("@google/generative-ai");
@@ -405,6 +406,9 @@ class ChatHandler {
             // Send the chunk to the callback
             streamCallback("chunk", chunkText, fullResponse);
           }
+
+          const completedResponse = await streamingResponse.response;
+          logGeminiResponseDiagnostics(completedResponse);
           
           // Create the final response
           const finalResponse = {
@@ -483,6 +487,7 @@ class ChatHandler {
         });
 
         const response = result.response;
+        logGeminiResponseDiagnostics(response);
         const text = response.text();
 
         const finalResponse = {

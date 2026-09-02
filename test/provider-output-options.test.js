@@ -20,10 +20,46 @@ test("controls Gemini 2.5 Flash thinking within the selected budget", () => {
     thinkingConfig: { thinkingBudget: 0 },
   });
   assert.deepEqual(getGeminiOutputOptions(2048, "models/gemini-2.5-flash"), {
-    maxOutputTokens: 2048,
+    maxOutputTokens: 2560,
     thinkingConfig: { thinkingBudget: 512 },
   });
   assert.deepEqual(getGeminiOutputOptions(256, "gemini-2.5-flash-lite"), {
+    maxOutputTokens: 256,
+  });
+});
+
+test("reserves Gemini 3.5 Flash thinking outside the visible response target", () => {
+  assert.deepEqual(getGeminiOutputOptions(256, "gemini-3.5-flash"), {
+    maxOutputTokens: 384,
+    thinkingConfig: { thinkingLevel: "minimal" },
+  });
+  assert.deepEqual(getGeminiOutputOptions(768, "models/gemini-3.5-flash"), {
+    maxOutputTokens: 1024,
+    thinkingConfig: { thinkingLevel: "low" },
+  });
+  assert.deepEqual(getGeminiOutputOptions(2048, "gemini-3.5-flash"), {
+    maxOutputTokens: 2560,
+    thinkingConfig: { thinkingLevel: "medium" },
+  });
+});
+
+test("uses model-compatible Gemini 3 thinking levels", () => {
+  assert.deepEqual(getGeminiOutputOptions(256, "gemini-3.7-flash"), {
+    maxOutputTokens: 384,
+    thinkingConfig: { thinkingLevel: "low" },
+  });
+  assert.deepEqual(getGeminiOutputOptions(128, "gemini-3.6-flash-09-2026"), {
+    maxOutputTokens: 256,
+    thinkingConfig: { thinkingLevel: "minimal" },
+  });
+  assert.deepEqual(getGeminiOutputOptions(4096, "gemini-3-flash-preview"), {
+    maxOutputTokens: 4608,
+    thinkingConfig: { thinkingLevel: "medium" },
+  });
+});
+
+test("does not guess thinking controls for unknown Gemini models", () => {
+  assert.deepEqual(getGeminiOutputOptions(256, "gemini-1.5-flash"), {
     maxOutputTokens: 256,
   });
 });
