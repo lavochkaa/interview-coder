@@ -70,11 +70,12 @@ Steps:
 
 1. Pass an explicit effective output limit from processing code into provider generation methods.
 2. Map it to Gemini `maxOutputTokens`.
-3. Map it to OpenAI/Azure `max_tokens`.
-4. Map it to Ollama `options.num_predict` for chat, generate, retry, and fallback calls.
-5. Ensure streaming and non-streaming calls use the same limit.
-6. Remove hard-coded 8192/2048/4096 response limits where the selected profile should apply.
-7. Never retry a rejected request without a limit.
+3. Control Gemini 2.5 Flash thinking so small profiles are not consumed by hidden reasoning tokens.
+4. Map it to OpenAI/Azure `max_tokens`.
+5. Map it to Ollama `options.num_predict` for chat, generate, retry, and fallback calls.
+6. Ensure streaming and non-streaming calls use the same limit.
+7. Remove hard-coded 8192/2048/4096 response limits where the selected profile should apply.
+8. Never retry a rejected request without a limit.
 
 ## Task 5: Settings UI
 

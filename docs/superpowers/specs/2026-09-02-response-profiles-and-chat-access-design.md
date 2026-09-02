@@ -92,6 +92,8 @@ Generation calls receive the effective limit explicitly rather than reading UI s
 - OpenAI and Azure Foundry: `max_tokens`;
 - Ollama chat/generate: `options.num_predict`.
 
+Gemini 2.5 Flash uses dynamic thinking by default and bills thinking tokens as output. For Easy and Medium, the application sets `thinkingBudget` to `0`; for Hard and larger Custom budgets it caps thinking at 512 tokens. Other Gemini model families keep their provider defaults unless their thinking controls are known to be compatible.
+
 Streaming and non-streaming calls must use the same value. Retry and fallback paths must preserve the limit rather than reverting to the previous hard-coded defaults.
 
 ## Settings UI
