@@ -1,5 +1,9 @@
 const fs = require("fs");
 const path = require("path");
+const {
+  validateResponseProfile,
+  validateCustomMaxOutputTokens,
+} = require("./response-profiles");
 
 const CONFIG_FILENAME = "interview-coder.config.json";
 const SUPPORTED_PROVIDERS = new Set(["AI", "openai", "gemini", "ollama", "azure-foundry"]);
@@ -28,7 +32,7 @@ function validateProjectConfig(config, filePath = CONFIG_FILENAME) {
     throw new ProjectConfigError("Configuration root must be a JSON object", filePath);
   }
 
-  ["aiProvider", "currentModel", "responseLanguage", "ollamaUrl", "azureEndpoint"].forEach((field) => {
+  ["aiProvider", "currentModel", "responseLanguage", "responseProfile", "ollamaUrl", "azureEndpoint"].forEach((field) => {
     assertString(config, field, filePath);
   });
 
@@ -38,6 +42,15 @@ function validateProjectConfig(config, filePath = CONFIG_FILENAME) {
 
   if (config.responseLanguage && !SUPPORTED_LANGUAGES.has(config.responseLanguage)) {
     throw new ProjectConfigError(`Unsupported response language "${config.responseLanguage}"`, filePath);
+  }
+
+  try {
+    if (config.responseProfile !== undefined) validateResponseProfile(config.responseProfile);
+    if (config.customMaxOutputTokens !== undefined) {
+      validateCustomMaxOutputTokens(config.customMaxOutputTokens);
+    }
+  } catch (error) {
+    throw new ProjectConfigError(error.message, filePath);
   }
 
   if (config.apiKeys !== undefined) {

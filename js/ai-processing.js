@@ -7,96 +7,31 @@ const { getUserDataPath } = require("./utils");
 const fs = require("fs");
 const toastManager = require("./toast-manager");
 const log = require("electron-log");
-const { createUIPrompt } = require("./ui-implementation-prompt");
 const { createDirectAnswerPrompt } = require("./direct-answer-prompt");
-const { getResponseLanguageInstruction } = require("./language-instructions");
+const {
+  createAnalysisPrompt: createPrompt,
+  createUIResponsePrompt,
+} = require("./analysis-prompts");
+const {
+  getEffectiveMaxOutputTokens,
+  getResponseProfileInstruction,
+} = require("./response-profiles");
+const {
+  getOpenAIOutputOptions,
+  getGeminiOutputOptions,
+} = require("./provider-output-options");
 
 // Store active request controllers for cancellation
 let activeRequestControllers = new Set();
 
-const basePrompt = `I need you to analyze this problem carefully and provide the best possible solution with excellent performance and readability.
-
-Guidelines:
-1. Take time to understand the problem fully before proposing a solution.
-2. Consider different approaches and select the most appropriate one.
-3. Prioritize code readability and maintainability while ensuring good performance.
-4. Handle edge cases and include error handling where appropriate.
-5. Start with a clear understanding of the problem before diving into code.
-6. Use modern practices, efficient algorithms, and optimize for both time and space complexity.
-7. Structure your code with clean architecture principles.
-8. Include robust error handling and edge case considerations.
-
-Your response MUST follow this exact structure with these main sections:
-
-# Analyzing the Problem
-Provide a clear understanding of what the problem is asking, including:
-- The key requirements and constraints
-- Input/output specifications
-- Important edge cases to consider
-- Any implicit assumptions
-
-# My Thoughts
-- Explain your chosen approach and why it's optimal for this problem
-- Discuss any alternative approaches you considered
-- Outline the key algorithms or data structures you're using
-- The complete, well-commented implementation
-- Any trade-offs or alternative approaches you considered
-
-# Implementation
-- Start with a high-level overview of your solution strategy
-- Break down your implementation into logical steps, explaining each step before showing the code
-- For each significant code segment:
-  * First explain what you're going to do and why
-  * Then show the implementation with clean, well-structured code
-  * Use descriptive variable names that clearly indicate purpose
-- Structure your code naturally as a human developer would (not top-to-bottom sequential)
-- Group related logic and functionality together
-- Include detailed bilingual comments in both English and the user's selected language for all key parts
-- Comments should explain WHY, not just WHAT the code does
-- Demonstrate proper error handling and edge case coverage
-- Apply clean code principles and best practices
-
-# Complexity
-Analyze the efficiency of your solution:
-- Time complexity with explanation
-- Space complexity with explanation
-- Potential bottlenecks
-- Any further optimization possibilities
-
-Format your response in clear, well-structured Markdown with proper code blocks for all code.`;
-
-/**
- * Creates a prompt for the AI based on the number of screenshots and preferred language
- *
- * @param {number} screenshotsCount - The number of screenshots
- * @param {string} language - The preferred language for the response (e.g., 'en', 'vi')
- * @returns {string} The prompt for the AI
- */
-function createPrompt(screenshotsCount, language = "en") {
-  log.info("Create prompt with language:", language);
-  let prompt = "";
-  if (screenshotsCount === 1) {
-    prompt = `The screenshot shows a programming problem or question. ${basePrompt}`;
-  } else {
-    prompt = `These ${screenshotsCount} screenshots show a multi-part programming problem. ${basePrompt}`;
-  }
-
-  const languageMap = {
-    vi: "Vietnamese",
-    es: "Spanish",
-    fr: "French",
-    de: "German",
-    ja: "Japanese",
-    ko: "Korean",
-    zh: "Chinese",
-    ru: "Russian",
+function getConfiguredResponseOptions() {
+  const responseProfile = configManager.getResponseProfile();
+  const customMaxOutputTokens = configManager.getCustomMaxOutputTokens();
+  return {
+    responseProfile,
+    customMaxOutputTokens,
+    maxOutputTokens: getEffectiveMaxOutputTokens(responseProfile, customMaxOutputTokens),
   };
-
-  if (language === "en" || !languageMap[language]) {
-    return prompt;
-  }
-
-  return `${prompt}\n\nIMPORTANT: Please respond entirely in ${languageMap[language]} language. For the Implementation section, provide all code comments in both English and ${languageMap[language]} side-by-side. Example: /* This validates the input (English) / Esto valida la entrada (Spanish) */`;
 }
 
 /**
@@ -125,6 +60,7 @@ async function processScreenshots(
 
     // Get the user's preferred response language
     const responseLanguage = configManager.getResponseLanguage();
+    const responseOptions = getConfiguredResponseOptions();
 
     if (aiProvider === AI_PROVIDERS.OLLAMA) {
       const modelVerification = await verifyOllamaModelFn(currentModel);
@@ -135,7 +71,12 @@ async function processScreenshots(
       }
     }
 
-    const promptText = createPrompt(screenshots.length, responseLanguage);
+    const promptText = createPrompt(
+      screenshots.length,
+      responseLanguage,
+      responseOptions.responseProfile,
+      responseOptions.customMaxOutputTokens,
+    );
     log.info("Prompt text in processScreenshots:", promptText);
 
     const messages = [{ type: "text", text: promptText }];
@@ -172,7 +113,7 @@ async function processScreenshots(
         const stream = await openai.chat.completions.create({
           model: currentModel,
           messages: [{ role: "user", content: messages }],
-          max_tokens: 8000,
+          ...getOpenAIOutputOptions(responseOptions.maxOutputTokens),
           stream: true,
         });
 
@@ -193,13 +134,13 @@ async function processScreenshots(
         const response = await openai.chat.completions.create({
           model: currentModel,
           messages: [{ role: "user", content: messages }],
-          max_tokens: 8000,
+          ...getOpenAIOutputOptions(responseOptions.maxOutputTokens),
         });
 
         result = response.choices[0].message.content;
       }
     } else if (aiProvider === AI_PROVIDERS.OLLAMA) {
-      result = await generateWithOllamaFn(messages, currentModel);
+      result = await generateWithOllamaFn(messages, currentModel, responseOptions.maxOutputTokens);
     } else if (aiProvider === AI_PROVIDERS.GEMINI) {
       // Get Gemini client from AI providers module if not provided
       const geminiAI = aiProviders.getGeminiAI();
@@ -209,7 +150,12 @@ async function processScreenshots(
       }
 
       if (useStreaming) {
-        const streamingResult = await generateWithGeminiFn(messages, currentModel, true);
+        const streamingResult = await generateWithGeminiFn(
+          messages,
+          currentModel,
+          true,
+          responseOptions.maxOutputTokens,
+        );
 
         mainWindow.webContents.send(IPC_CHANNELS.LOADING, false);
         mainWindow.webContents.send(IPC_CHANNELS.STREAM_START);
@@ -234,7 +180,12 @@ async function processScreenshots(
 
         return;
       } else {
-        result = await generateWithGeminiFn(messages, currentModel);
+        result = await generateWithGeminiFn(
+          messages,
+          currentModel,
+          false,
+          responseOptions.maxOutputTokens,
+        );
       }
     } else if (aiProvider === AI_PROVIDERS.AZURE_FOUNDRY) {
       // Try to reinitialize Azure Foundry if not already initialized
@@ -252,7 +203,13 @@ async function processScreenshots(
       }
 
       if (useStreaming) {
-        const streamingResult = await aiProviders.generateWithAzureFoundry(messages, currentModel, true);
+        const streamingResult = await aiProviders.generateWithAzureFoundry(
+          messages,
+          currentModel,
+          true,
+          null,
+          responseOptions.maxOutputTokens,
+        );
 
         mainWindow.webContents.send(IPC_CHANNELS.LOADING, false);
         mainWindow.webContents.send(IPC_CHANNELS.STREAM_START);
@@ -277,7 +234,13 @@ async function processScreenshots(
 
         return;
       } else {
-        result = await aiProviders.generateWithAzureFoundry(messages, currentModel, false);
+        result = await aiProviders.generateWithAzureFoundry(
+          messages,
+          currentModel,
+          false,
+          null,
+          responseOptions.maxOutputTokens,
+        );
       }
     } else {
       throw new Error(`Unknown AI provider: ${aiProvider}`);
@@ -315,6 +278,11 @@ async function processChatMessage(window, messageHistory, systemPrompt) {
     // Get current AI settings
     const settings = configManager.getCurrentSettings();
     const { aiProvider, currentModel } = settings;
+    const responseOptions = getConfiguredResponseOptions();
+    const profileInstruction = getResponseProfileInstruction(
+      responseOptions.responseProfile,
+      responseOptions.customMaxOutputTokens,
+    );
 
     if (!aiProvider || aiProvider === AI_PROVIDERS.DEFAULT) {
       toastManager.error("Please configure an AI provider in settings first.");
@@ -324,9 +292,8 @@ async function processChatMessage(window, messageHistory, systemPrompt) {
     let messages = [];
 
     // Add system prompt if provided
-    if (systemPrompt) {
-      messages.push({ role: "system", content: systemPrompt });
-    }
+    const effectiveSystemPrompt = [systemPrompt, profileInstruction].filter(Boolean).join("\n\n");
+    if (effectiveSystemPrompt) messages.push({ role: "system", content: effectiveSystemPrompt });
 
     // Add message history
     messageHistory.forEach((msg) => {
@@ -346,7 +313,7 @@ async function processChatMessage(window, messageHistory, systemPrompt) {
       const result = await openai.chat.completions.create({
         model: currentModel,
         messages: messages,
-        max_tokens: 4000,
+        ...getOpenAIOutputOptions(responseOptions.maxOutputTokens),
       });
 
       response = { role: "assistant", content: result.choices[0].message.content };
@@ -370,7 +337,7 @@ async function processChatMessage(window, messageHistory, systemPrompt) {
       const result = await geminiAI.generateContent({
         contents: geminiMessages,
         generationConfig: {
-          maxOutputTokens: 8192,
+          ...getGeminiOutputOptions(responseOptions.maxOutputTokens, currentModel),
         },
       });
 
@@ -378,8 +345,9 @@ async function processChatMessage(window, messageHistory, systemPrompt) {
     } else if (aiProvider === AI_PROVIDERS.OLLAMA) {
       // Use Ollama client
       const result = await aiProviders.generateWithOllama(
-        messages.map((msg) => msg.content),
+        messages,
         currentModel,
+        responseOptions.maxOutputTokens,
       );
 
       response = { role: "assistant", content: result };
@@ -449,9 +417,14 @@ async function processScreenshotsForUI(
       }
     }
 
-    // Use the specialized UI implementation prompt
-    const languageInstruction = getResponseLanguageInstruction(configManager.getResponseLanguage());
-    const promptText = [createUIPrompt(screenshots.length), languageInstruction].filter(Boolean).join("\n\n");
+    // Use a profile-aware UI prompt so small budgets do not request an impossible full implementation.
+    const responseOptions = getConfiguredResponseOptions();
+    const promptText = createUIResponsePrompt(
+      screenshots.length,
+      configManager.getResponseLanguage(),
+      responseOptions.responseProfile,
+      responseOptions.customMaxOutputTokens,
+    );
     log.info("UI implementation prompt created for", screenshots.length, "screenshots");
 
     const messages = [{ type: "text", text: promptText }];
@@ -488,7 +461,7 @@ async function processScreenshotsForUI(
         const stream = await openai.chat.completions.create({
           model: currentModel,
           messages: [{ role: "user", content: messages }],
-          max_tokens: 8000,
+          ...getOpenAIOutputOptions(responseOptions.maxOutputTokens),
           stream: true,
         });
 
@@ -510,13 +483,13 @@ async function processScreenshotsForUI(
         const response = await openai.chat.completions.create({
           model: currentModel,
           messages: [{ role: "user", content: messages }],
-          max_tokens: 8000,
+          ...getOpenAIOutputOptions(responseOptions.maxOutputTokens),
         });
 
         result = response.choices[0].message.content;
       }
     } else if (aiProvider === AI_PROVIDERS.OLLAMA) {
-      result = await generateWithOllamaFn(messages, currentModel);
+      result = await generateWithOllamaFn(messages, currentModel, responseOptions.maxOutputTokens);
     } else if (aiProvider === AI_PROVIDERS.GEMINI) {
       // Get Gemini client from AI providers module if not provided
       const geminiAI = aiProviders.getGeminiAI();
@@ -526,7 +499,12 @@ async function processScreenshotsForUI(
       }
 
       if (useStreaming) {
-        const streamingResult = await generateWithGeminiFn(messages, currentModel, true);
+        const streamingResult = await generateWithGeminiFn(
+          messages,
+          currentModel,
+          true,
+          responseOptions.maxOutputTokens,
+        );
 
         mainWindow.webContents.send(IPC_CHANNELS.LOADING, false);
         mainWindow.webContents.send(IPC_CHANNELS.STREAM_START);
@@ -552,7 +530,12 @@ async function processScreenshotsForUI(
 
         return;
       } else {
-        result = await generateWithGeminiFn(messages, currentModel);
+        result = await generateWithGeminiFn(
+          messages,
+          currentModel,
+          false,
+          responseOptions.maxOutputTokens,
+        );
       }
     } else if (aiProvider === AI_PROVIDERS.AZURE_FOUNDRY) {
       // Try to reinitialize Azure Foundry if not already initialized
@@ -570,7 +553,13 @@ async function processScreenshotsForUI(
       }
 
       if (useStreaming) {
-        const streamingResult = await aiProviders.generateWithAzureFoundry(messages, currentModel, true);
+        const streamingResult = await aiProviders.generateWithAzureFoundry(
+          messages,
+          currentModel,
+          true,
+          null,
+          responseOptions.maxOutputTokens,
+        );
 
         mainWindow.webContents.send(IPC_CHANNELS.LOADING, false);
         mainWindow.webContents.send(IPC_CHANNELS.STREAM_START);
@@ -596,7 +585,13 @@ async function processScreenshotsForUI(
 
         return;
       } else {
-        result = await aiProviders.generateWithAzureFoundry(messages, currentModel, false);
+        result = await aiProviders.generateWithAzureFoundry(
+          messages,
+          currentModel,
+          false,
+          null,
+          responseOptions.maxOutputTokens,
+        );
       }
     } else {
       throw new Error(`Unknown AI provider: ${aiProvider}`);
@@ -661,8 +656,14 @@ async function processScreenshotsForDirectAnswer(
       }
     }
 
-    // Use the direct answer prompt instead of base prompt
-    const promptText = createDirectAnswerPrompt(screenshots.length, responseLanguage);
+    // Use the direct answer prompt with the same global response budget.
+    const responseOptions = getConfiguredResponseOptions();
+    const promptText = createDirectAnswerPrompt(
+      screenshots.length,
+      responseLanguage,
+      responseOptions.responseProfile,
+      responseOptions.customMaxOutputTokens,
+    );
     log.info("Direct answer prompt created for", screenshots.length, "screenshots");
 
     const messages = [{ type: "text", text: promptText }];
@@ -699,7 +700,7 @@ async function processScreenshotsForDirectAnswer(
         const stream = await openai.chat.completions.create({
           model: currentModel,
           messages: [{ role: "user", content: messages }],
-          max_tokens: 4000, // Shorter max tokens for direct answers
+          ...getOpenAIOutputOptions(responseOptions.maxOutputTokens),
           stream: true,
           signal: abortController.signal,
         });
@@ -726,14 +727,14 @@ async function processScreenshotsForDirectAnswer(
         const response = await openai.chat.completions.create({
           model: currentModel,
           messages: [{ role: "user", content: messages }],
-          max_tokens: 4000,
+          ...getOpenAIOutputOptions(responseOptions.maxOutputTokens),
           signal: abortController.signal,
         });
 
         result = response.choices[0].message.content;
       }
     } else if (aiProvider === AI_PROVIDERS.OLLAMA) {
-      result = await generateWithOllamaFn(messages, currentModel);
+      result = await generateWithOllamaFn(messages, currentModel, responseOptions.maxOutputTokens);
     } else if (aiProvider === AI_PROVIDERS.GEMINI) {
       // Get Gemini client from AI providers module if not provided
       const geminiAI = aiProviders.getGeminiAI();
@@ -743,7 +744,12 @@ async function processScreenshotsForDirectAnswer(
       }
 
       if (useStreaming) {
-        const streamingResult = await generateWithGeminiFn(messages, currentModel, true);
+        const streamingResult = await generateWithGeminiFn(
+          messages,
+          currentModel,
+          true,
+          responseOptions.maxOutputTokens,
+        );
 
         mainWindow.webContents.send(IPC_CHANNELS.LOADING, false);
         mainWindow.webContents.send(IPC_CHANNELS.STREAM_START);
@@ -775,7 +781,12 @@ async function processScreenshotsForDirectAnswer(
 
         return;
       } else {
-        result = await generateWithGeminiFn(messages, currentModel);
+        result = await generateWithGeminiFn(
+          messages,
+          currentModel,
+          false,
+          responseOptions.maxOutputTokens,
+        );
       }
     } else if (aiProvider === AI_PROVIDERS.AZURE_FOUNDRY) {
       // Try to reinitialize Azure Foundry if not already initialized
@@ -793,7 +804,13 @@ async function processScreenshotsForDirectAnswer(
       }
 
       if (useStreaming) {
-        const streamingResult = await aiProviders.generateWithAzureFoundry(messages, currentModel, true);
+        const streamingResult = await aiProviders.generateWithAzureFoundry(
+          messages,
+          currentModel,
+          true,
+          null,
+          responseOptions.maxOutputTokens,
+        );
 
         mainWindow.webContents.send(IPC_CHANNELS.LOADING, false);
         mainWindow.webContents.send(IPC_CHANNELS.STREAM_START);
@@ -825,7 +842,13 @@ async function processScreenshotsForDirectAnswer(
 
         return;
       } else {
-        result = await aiProviders.generateWithAzureFoundry(messages, currentModel, false);
+        result = await aiProviders.generateWithAzureFoundry(
+          messages,
+          currentModel,
+          false,
+          null,
+          responseOptions.maxOutputTokens,
+        );
       }
     } else {
       throw new Error(`Unknown AI provider: ${aiProvider}`);

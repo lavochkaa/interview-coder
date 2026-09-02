@@ -271,7 +271,10 @@ function toggleSplitView(event) {
   let newState;
   if (event && event.forceState !== undefined) {
     newState = event.forceState;
-    if (isSplitView === newState) return;
+    if (isSplitView === newState) {
+      if (newState) document.getElementById("split-chat-input")?.focus();
+      return;
+    }
   } else {
     newState = !isSplitView;
   }
@@ -986,6 +989,14 @@ const onEventDOMContentLoaded = async () => {
   const splitSendBtn = document.getElementById("split-send-btn");
   const splitChatInput = document.getElementById("split-chat-input");
   const toggleSystemPromptBtn = document.getElementById("toggle-system-prompt-btn");
+  const chatToolbarButton = document.getElementById("chat-toolbar-button");
+  const newChatButton = document.getElementById("new-chat-button");
+
+  chatToolbarButton?.addEventListener("click", () => toggleSplitView({ forceState: true }));
+  newChatButton?.addEventListener("click", () => {
+    resetChat();
+    splitChatInput?.focus();
+  });
 
   // Send message for split view chat interface
   if (splitSendBtn && splitChatInput) {

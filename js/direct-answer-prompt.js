@@ -1,20 +1,12 @@
 const log = require("electron-log");
+const { getResponseLanguageInstruction } = require("./language-instructions");
+const {
+  DEFAULT_RESPONSE_PROFILE,
+  DEFAULT_CUSTOM_MAX_OUTPUT_TOKENS,
+  getResponseProfileInstruction,
+} = require("./response-profiles");
 
-const directAnswerPrompt = `Analyze this problem and provide the BEST ANSWER with quick analytics.
-
-Response format:
-# Answer
-[Direct answer - for MCQ: "Answer: B", for code: optimal solution, for numerical: exact result]
-
-# Quick Analysis
-[2-3 key points explaining why this is correct]
-
-# Code (if needed)
-\`\`\`language
-// Clean, working solution
-\`\`\`
-
-Be concise and accurate. Focus on correctness and clarity.`;
+const directAnswerPrompt = `Give the direct answer visible from the screenshot. For a multiple-choice question, return the option and a brief reason. For an error, state the likely cause and smallest fix. Include code only when it is necessary to answer.`;
 
 /**
  * Creates a direct answer prompt for quick solutions
@@ -23,7 +15,12 @@ Be concise and accurate. Focus on correctness and clarity.`;
  * @param {string} language - The preferred language for the response (e.g., 'en', 'vi')
  * @returns {string} The prompt for direct answers
  */
-function createDirectAnswerPrompt(screenshotsCount, language = "en") {
+function createDirectAnswerPrompt(
+  screenshotsCount,
+  language = "en",
+  responseProfile = DEFAULT_RESPONSE_PROFILE,
+  customMaxOutputTokens = DEFAULT_CUSTOM_MAX_OUTPUT_TOKENS,
+) {
   log.info("Creating direct answer prompt with language:", language);
 
   let prompt = "";
@@ -33,22 +30,9 @@ function createDirectAnswerPrompt(screenshotsCount, language = "en") {
     prompt = `These ${screenshotsCount} screenshots show a question or problem that needs a direct answer. Analyze all parts carefully. ${directAnswerPrompt}`;
   }
 
-  const languageMap = {
-    vi: "Vietnamese",
-    es: "Spanish",
-    fr: "French",
-    de: "German",
-    ja: "Japanese",
-    ko: "Korean",
-    zh: "Chinese",
-    ru: "Russian",
-  };
-
-  if (language === "en" || !languageMap[language]) {
-    return prompt;
-  }
-
-  return `${prompt}\n\nIMPORTANT: Please respond entirely in ${languageMap[language]} language.`;
+  const languageInstruction = getResponseLanguageInstruction(language);
+  const profileInstruction = getResponseProfileInstruction(responseProfile, customMaxOutputTokens);
+  return [prompt, languageInstruction, profileInstruction].filter(Boolean).join("\n\n");
 }
 
 module.exports = {

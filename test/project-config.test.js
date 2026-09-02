@@ -31,6 +31,18 @@ test("rejects malformed and unsupported configuration", () => {
     () => validateProjectConfig({ responseLanguage: "xx" }, "config.json"),
     /Unsupported response language/,
   );
+  assert.throws(
+    () => validateProjectConfig({ responseProfile: "verbose" }, "config.json"),
+    /Unsupported response profile/,
+  );
+  assert.throws(
+    () => validateProjectConfig({ customMaxOutputTokens: 64 }, "config.json"),
+    /between 128 and 8192/,
+  );
+  assert.throws(
+    () => validateProjectConfig({ customMaxOutputTokens: 256.5 }, "config.json"),
+    /must be an integer/,
+  );
 });
 
 test("writes atomically, preserves unknown fields, and applies private permissions", () => {
@@ -40,6 +52,8 @@ test("writes atomically, preserves unknown fields, and applies private permissio
     aiProvider: "gemini",
     currentModel: "gemini-2.5-flash",
     responseLanguage: "ru",
+    responseProfile: "easy",
+    customMaxOutputTokens: 1024,
     customField: { keep: true },
     apiKeys: { gemini: "secret" },
   };

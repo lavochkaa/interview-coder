@@ -6,6 +6,10 @@ const EventEmitter = require("events");
 const { AI_PROVIDERS } = require("./constants");
 const { getMergedSettings, saveApiKey } = require("./config-manager");
 const { generateWithAzureFoundry, getAzureFoundryModels, validateAzureFoundryConfig } = require("./azure-foundry-provider");
+const {
+  getGeminiOutputOptions,
+  getOllamaOutputOptions,
+} = require("./provider-output-options");
 const fs = require("fs");
 
 axios.defaults.family = 4;
@@ -238,7 +242,7 @@ async function verifyOllamaModel(modelName) {
  * @param {string} model - The model to use for the chat completion
  * @returns {Promise<string>} The generated chat completion
  */
-async function generateWithOllama(messages, model) {
+async function generateWithOllama(messages, model, maxOutputTokens = 2048) {
   try {
     const isDeepseek = model.toLowerCase().includes("deepseek-r1");
     const ollamaMessages = [];
@@ -271,6 +275,7 @@ async function generateWithOllama(messages, model) {
             prompt: prompt,
             images: imageList,
             stream: false,
+            options: getOllamaOutputOptions(maxOutputTokens),
           },
           {
             timeout: 180000,
@@ -298,6 +303,7 @@ async function generateWithOllama(messages, model) {
               messages: ollamaMessages,
               images: imageList,
               stream: false,
+              options: getOllamaOutputOptions(maxOutputTokens),
             },
             {
               timeout: 180000, // 3 minutes
@@ -364,6 +370,7 @@ async function generateWithOllama(messages, model) {
           model: model,
           messages: ollamaMessages,
           stream: false,
+          options: getOllamaOutputOptions(maxOutputTokens),
         },
         {
           timeout: 120000,
@@ -402,6 +409,7 @@ async function generateWithOllama(messages, model) {
             model: model,
             prompt: prompt,
             stream: false,
+            options: getOllamaOutputOptions(maxOutputTokens),
           },
           {
             timeout: 120000,
@@ -435,7 +443,7 @@ async function generateWithOllama(messages, model) {
 }
 
 // Generate with Gemini
-async function generateWithGemini(messages, model, streaming = false) {
+async function generateWithGemini(messages, model, streaming = false, maxOutputTokens = 8192) {
   try {
     if (!geminiAI) {
       throw new Error("Gemini AI client is not initialized. Please go to Settings and enter your API key.");
@@ -530,7 +538,7 @@ async function generateWithGemini(messages, model, streaming = false) {
       temperature: 0.4,
       topP: 0.95,
       topK: 40,
-      maxOutputTokens: 8192,
+      ...getGeminiOutputOptions(maxOutputTokens, model),
     };
 
     const safetySettings = [
@@ -628,11 +636,24 @@ function setAzureFoundryEndpoint(url) {
  * @param {string} systemPrompt - Optional system prompt
  * @returns {Promise} Response or streaming emitter
  */
-async function generateWithAzureFoundryWrapper(messages, model, streaming = false, systemPrompt = null) {
+async function generateWithAzureFoundryWrapper(
+  messages,
+  model,
+  streaming = false,
+  systemPrompt = null,
+  maxOutputTokens = 4096,
+) {
   if (!azureFoundryClient) {
     throw new Error("Azure Foundry client is not initialized. Please go to Settings and enter your API key and endpoint.");
   }
-  return generateWithAzureFoundry(azureFoundryClient, messages, model, streaming, systemPrompt);
+  return generateWithAzureFoundry(
+    azureFoundryClient,
+    messages,
+    model,
+    streaming,
+    systemPrompt,
+    maxOutputTokens,
+  );
 }
 
 // Export functions

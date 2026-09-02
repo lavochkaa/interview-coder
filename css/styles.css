@@ -572,6 +572,7 @@ body.invisible-mode:hover {
   white-space: nowrap;
   -webkit-app-region: no-drag;
   border: 1px solid rgba(80, 80, 80, 0.3);
+  font-family: inherit;
 }
 
 .toolbar-button:hover {
@@ -679,6 +680,36 @@ code.inline-code {
   display: flex;
   flex-direction: column;
   height: 100%;
+}
+
+.chat-pane-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 42px;
+  padding: 8px 14px;
+  box-sizing: border-box;
+  border-bottom: 1px solid #eaeaea;
+  background: #fff;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.new-chat-button {
+  padding: 6px 10px;
+  border: 1px solid #d7dce2;
+  border-radius: 6px;
+  background: #f8f9fa;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.new-chat-button:hover {
+  border-color: var(--border-focused);
+  color: var(--bg-button-primary);
 }
 
 .messages-container {

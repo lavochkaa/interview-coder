@@ -128,6 +128,17 @@ Choose your preferred language for AI responses:
 
 The application will generate all AI responses in your selected language, with solution approaches tailored to your language preference.
 
+## 📏 Response Size
+
+The Response Size section in Settings applies a hard output-token limit to screenshots and chat:
+
+- Easy (default): 256 tokens for direct answers and small fixes
+- Medium: 768 tokens for junior-interview explanations and minimal patches
+- Hard: 2048 tokens for complex solutions
+- Custom: any integer from 128 to 8192 tokens
+
+The prompt also asks the model to avoid repeated analysis, full files, and unnecessary theory. The limit controls output tokens; screenshots and conversation history still use input tokens.
+
 ## 🔧 Troubleshooting
 
 ### macOS Issues
@@ -226,8 +237,9 @@ npm run dev:windows
 
 ## Chat Features
 
+- Open Chat: Click the Chat button in the toolbar or press `⌘+T` (Mac) / `Ctrl+T` (Windows/Linux).
 - Reset Chat: You can reset the current chat to its initial state by pressing `⌘+R` (Mac) or `Ctrl+R` (Windows/Linux) while in split view.
-- New Chat: You can create a new chat session by pressing `⌘+N` (Mac) or `Ctrl+N` (Windows/Linux).
+- New Chat: Click New Chat inside the chat pane or press `⌘+N` (Mac) / `Ctrl+N` (Windows/Linux).
 
 <div align="center">
 <br/>

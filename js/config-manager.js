@@ -7,6 +7,11 @@ const {
   readProjectConfig,
   writeProjectConfigAtomic,
 } = require("./project-config");
+const {
+  DEFAULT_RESPONSE_PROFILE,
+  DEFAULT_CUSTOM_MAX_OUTPUT_TOKENS,
+  getEffectiveMaxOutputTokens,
+} = require("./response-profiles");
 
 const DEFAULT_SETTINGS = {
   aiProvider: AI_PROVIDERS.DEFAULT,
@@ -14,6 +19,8 @@ const DEFAULT_SETTINGS = {
   ollamaUrl: "http://127.0.0.1:11434",
   azureEndpoint: "",
   responseLanguage: "en",
+  responseProfile: DEFAULT_RESPONSE_PROFILE,
+  customMaxOutputTokens: DEFAULT_CUSTOM_MAX_OUTPUT_TOKENS,
   apiKeys: {},
 };
 
@@ -133,6 +140,18 @@ function setResponseLanguage(language) {
   return language;
 }
 
+function getResponseProfile() {
+  return settings.responseProfile || DEFAULT_RESPONSE_PROFILE;
+}
+
+function getCustomMaxOutputTokens() {
+  return settings.customMaxOutputTokens ?? DEFAULT_CUSTOM_MAX_OUTPUT_TOKENS;
+}
+
+function getMaxOutputTokens() {
+  return getEffectiveMaxOutputTokens(getResponseProfile(), getCustomMaxOutputTokens());
+}
+
 function getAvailableLanguages() {
   return LANGUAGES;
 }
@@ -150,6 +169,7 @@ function getCurrentSettings() {
   const { apiKeys, apiKey, ...publicSettings } = settings;
   return {
     ...publicSettings,
+    effectiveMaxOutputTokens: getMaxOutputTokens(),
     configError: lastConfigError ? lastConfigError.message : null,
   };
 }
@@ -181,6 +201,9 @@ module.exports = {
   setCurrentModel,
   getResponseLanguage,
   setResponseLanguage,
+  getResponseProfile,
+  getCustomMaxOutputTokens,
+  getMaxOutputTokens,
   getAvailableLanguages,
   getAzureEndpoint,
   setAzureEndpoint,

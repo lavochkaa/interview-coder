@@ -22,6 +22,11 @@
       <span>Get help</span>
       <span class="shortcut">⌘ ?</span>
     </div>
+    <button id="chat-toolbar-button" class="toolbar-button" type="button" title="Open chat">
+      <span class="icon">💬</span>
+      <span>Chat</span>
+      <span class="shortcut">⌘ T</span>
+    </button>
     
     <!-- Update toolbar button - initially hidden -->
     <div id="update-toolbar-button" class="update-toolbar-button" style="display: none;">
@@ -78,6 +83,10 @@
         </div>
         <div class="split-pane right">
           <div id="right-chat-interface" class="chat-interface" style="display: flex;">
+            <div class="chat-pane-header">
+              <span>Chat</span>
+              <button id="new-chat-button" class="new-chat-button" type="button">New Chat</button>
+            </div>
             <div id="split-messages-container" class="messages-container">
               <div class="message ai-message">
                 Hello! How can I help you today?
