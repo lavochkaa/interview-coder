@@ -1,4 +1,3 @@
-const log = require("electron-log");
 const { getResponseLanguageInstruction } = require("./language-instructions");
 const {
   DEFAULT_RESPONSE_PROFILE,
@@ -21,8 +20,6 @@ function createDirectAnswerPrompt(
   responseProfile = DEFAULT_RESPONSE_PROFILE,
   customMaxOutputTokens = DEFAULT_CUSTOM_MAX_OUTPUT_TOKENS,
 ) {
-  log.info("Creating direct answer prompt with language:", language);
-
   let prompt = "";
   if (screenshotsCount === 1) {
     prompt = `The screenshot shows a question or problem that needs a direct answer. ${directAnswerPrompt}`;
