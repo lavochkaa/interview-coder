@@ -46,3 +46,6 @@ temp/
 
 # Claude
 .claude
+
+# Local agent instructions
+AGENTS.md
