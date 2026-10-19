@@ -63,7 +63,7 @@ Interview Coder is an advanced Electron application that leverages AI to analyze
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/MinhOmega/interview-coder.git
+   git clone https://github.com/lavochkaa/interview-coder.git
    cd interview-coder
    ```
 
