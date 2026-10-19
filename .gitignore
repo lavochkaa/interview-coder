@@ -45,6 +45,7 @@ tmp/
 temp/
 
 # Claude
+/.agent
 .claude
 
 # Local agent instructions
