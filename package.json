@@ -136,7 +136,7 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "minhomega",
+        "owner": "lavochkaa",
         "repo": "interview-coder",
         "private": false,
         "releaseType": "release"
