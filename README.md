@@ -91,7 +91,7 @@ No environment configuration is required to get started. API keys can be entered
 
 Settings and provider-specific API keys are also synchronized to a local
 `interview-coder.config.json` in the project root. This file is ignored by Git because it contains
-secrets. Copy `interview-coder.config.example.json` if you prefer to configure it manually.
+secrets. Saving settings in the application creates or updates this file; you can also edit it manually.
 
 ## 🔧 Using with Ollama
 
