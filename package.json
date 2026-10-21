@@ -185,6 +185,7 @@
     "rehype-stringify": "^8.0.0",
     "remark-parse": "^9.0.0",
     "remark-rehype": "^9.0.0",
+    "sanitize-html": "2.18.1",
     "screenshot-desktop": "^1.15.6",
     "semver": "^7.7.1",
     "toastify-js": "^1.12.0",

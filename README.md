@@ -52,7 +52,7 @@ Interview Coder is an advanced Electron application that leverages AI to analyze
 
 ## 🛠️ Prerequisites
 
-- [Node.js](https://nodejs.org/) (v18 or later recommended)
+- [Node.js](https://nodejs.org/) (v22.12.0 or later)
 - [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
 - For AI functionality (one of the following):
   - OpenAI API key
