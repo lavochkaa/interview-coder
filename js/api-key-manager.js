@@ -39,44 +39,37 @@ function saveApiKey(provider, key) {
 
 function loadApiKeys() {
   // Request all provider-specific API keys from the main process
-  ipcRenderer
+  return ipcRenderer
     .invoke(IPC_CHANNELS.GET_ALL_API_KEYS)
     .then((apiKeys) => {
-      if (apiKeys && typeof apiKeys === 'object') {
-        // Load provider-specific keys
-        Object.keys(API_KEYS).forEach((provider) => {
-          if (apiKeys[provider]) {
-            API_KEYS[provider].key = apiKeys[provider];
-            const input = document.getElementById(API_KEYS[provider].inputId);
-            if (input) {
-              input.value = maskApiKey(apiKeys[provider]);
-              updateApiKeyStatus(provider, "API key loaded successfully", "success");
-            }
+      const providerKeys = apiKeys && typeof apiKeys === "object" ? apiKeys : {};
+      Object.keys(API_KEYS).forEach((provider) => {
+        if (providerKeys[provider]) {
+          API_KEYS[provider].key = providerKeys[provider];
+          const input = document.getElementById(API_KEYS[provider].inputId);
+          if (input) {
+            input.value = maskApiKey(providerKeys[provider]);
+            updateApiKeyStatus(provider, "API key loaded successfully", "success");
+          }
+        }
+      });
+
+      const legacyProviders = ["openai", "gemini"].filter((provider) => !providerKeys[provider]);
+      if (legacyProviders.length === 0) return;
+
+      return ipcRenderer.invoke(IPC_CHANNELS.GET_API_KEY).then((apiKey) => {
+        if (!apiKey) return;
+        legacyProviders.forEach((provider) => {
+          API_KEYS[provider].key = apiKey;
+          const input = document.getElementById(API_KEYS[provider].inputId);
+          if (input) {
+            input.value = maskApiKey(apiKey);
+            updateApiKeyStatus(provider, "API key loaded successfully", "success");
           }
         });
-      } else {
-        // Fallback: Try to load single API key for backward compatibility
-        ipcRenderer
-          .invoke(IPC_CHANNELS.GET_API_KEY)
-          .then((apiKey) => {
-            if (apiKey) {
-              // Only set for OpenAI and Gemini for backward compatibility
-              ["openai", "gemini"].forEach((provider) => {
-                if (API_KEYS[provider]) {
-                  API_KEYS[provider].key = apiKey;
-                  const input = document.getElementById(API_KEYS[provider].inputId);
-                  if (input) {
-                    input.value = maskApiKey(apiKey);
-                    updateApiKeyStatus(provider, "API key loaded successfully", "success");
-                  }
-                }
-              });
-            }
-          })
-          .catch((err) => {
-            console.error("Error loading legacy API key:", err);
-          });
-      }
+      }).catch((err) => {
+        console.error("Error loading legacy API key:", err);
+      });
     })
     .catch((err) => {
       console.error("Error loading API keys:", err);
