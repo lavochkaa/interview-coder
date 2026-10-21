@@ -32,6 +32,13 @@
       "!*.map",
       "!*.md",
       "!*.code-workspace",
+      "!**/.env*",
+      "!interview-coder.config.json*",
+      "!.agent{,/**/*}",
+      "!.claude{,/**/*}",
+      "!screenshots{,/**/*}",
+      "!tmp{,/**/*}",
+      "!temp{,/**/*}",
       "!node_modules/.cache/**/*"
     ],
     "mac": {
