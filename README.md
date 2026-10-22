@@ -89,9 +89,13 @@ No environment configuration is required to get started. API keys can be entered
 6. Choose your preferred response language
 7. Save settings and start using!
 
-Settings and provider-specific API keys are also synchronized to a local
-`interview-coder.config.json` in the project root. This file is ignored by Git because it contains
-secrets. Saving settings in the application creates or updates this file; you can also edit it manually.
+Settings and provider-specific API keys are saved in `interview-coder.config.json`.
+When running from source, the file is in the launch directory (normally the project root)
+and is ignored by Git. In an installed app, it is in Electron's per-user `userData`
+directory, regardless of the launch directory. The app creates or updates the file
+when settings are saved; you can also edit it manually. If you used an older installed
+version, re-enter your API keys after upgrading; the old file in its previous launch
+directory is left untouched.
 
 ## 🔧 Using with Ollama
 
