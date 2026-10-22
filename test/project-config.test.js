@@ -5,11 +5,29 @@ const path = require("path");
 const test = require("node:test");
 
 const {
+  getConfigPath,
   mergeConfigs,
   readProjectConfig,
   validateProjectConfig,
   writeProjectConfigAtomic,
 } = require("../js/project-config");
+
+test("packaged config stays in user data regardless of working directory", () => {
+  const userDataPath = path.join(os.tmpdir(), "interview-coder-user-data");
+  const first = getConfigPath(true, userDataPath, path.join(os.tmpdir(), "launch-one"));
+  const second = getConfigPath(true, userDataPath, path.join(os.tmpdir(), "launch-two"));
+
+  assert.equal(first, path.join(userDataPath, "interview-coder.config.json"));
+  assert.equal(second, first);
+  assert.equal(
+    getConfigPath(false, userDataPath, path.join(os.tmpdir(), "source-tree")),
+    path.join(os.tmpdir(), "source-tree", "interview-coder.config.json"),
+  );
+  assert.throws(
+    () => getConfigPath(true, "", path.join(os.tmpdir(), "launch")),
+    /user data directory/,
+  );
+});
 
 test("merges nested provider keys without losing legacy keys", () => {
   const merged = mergeConfigs(

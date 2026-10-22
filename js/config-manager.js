@@ -1,8 +1,9 @@
 const fs = require("fs");
+const { app } = require("electron");
 const { AI_PROVIDERS } = require("./constants");
-const { getUserDataPath } = require("./utils");
+const { getAppPath, getUserDataPath } = require("./utils");
 const {
-  getProjectConfigPath,
+  getConfigPath,
   mergeConfigs,
   readProjectConfig,
   writeProjectConfigAtomic,
@@ -40,7 +41,11 @@ let settings = { ...DEFAULT_SETTINGS, apiKeys: {} };
 let lastConfigError = null;
 
 const getSettingsFilePath = () => getUserDataPath("interview-coder-settings.json");
-const getProjectSettingsFilePath = () => getProjectConfigPath(process.cwd());
+const getProjectSettingsFilePath = () => getConfigPath(
+  Boolean(app && app.isPackaged),
+  getAppPath("userData", ""),
+  process.cwd(),
+);
 
 function readLegacySettings() {
   const settingsFilePath = getSettingsFilePath();
