@@ -3,6 +3,7 @@ const { IPC_CHANNELS } = require("./constants");
 const { isLinux, isMac } = require("./config");
 const log = require("electron-log");
 const hotkeyManager = require("./hotkey-manager");
+const { LATEST_RELEASE_URL } = require("./release-source");
 const { ipcMain } = require("electron");
 
 let mainWindow;
@@ -80,7 +81,7 @@ function createMainWindow() {
             isMajorUpdate: true,
             currentVersion: app.getVersion(),
             latestVersion: "newer version", // This is a fallback in case data is lost
-            downloadUrl: `https://github.com/MinhOmega/interview-coder/releases/latest`,
+            downloadUrl: LATEST_RELEASE_URL,
           });
         }
       }

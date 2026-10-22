@@ -8,6 +8,7 @@ const axios = require("axios");
 const semver = require("semver");
 const log = require("electron-log");
 const { IPC_CHANNELS } = require("./constants");
+const { RELEASE_REPOSITORY } = require("./release-source");
 
 class UpdateManager {
   constructor(mainWindow) {
@@ -18,7 +19,7 @@ class UpdateManager {
     this.isMajorUpdate = false;
     this.updateCheckInterval = 3600000; // Check every hour (in ms)
     this.intervalId = null;
-    this.githubRepo = "MinhOmega/interview-coder";
+    this.githubRepo = RELEASE_REPOSITORY;
     this.releaseUrl = `https://github.com/${this.githubRepo}/releases/tag/`;
     this.shortcutsDisabled = false;
 
