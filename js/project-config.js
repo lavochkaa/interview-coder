@@ -21,6 +21,14 @@ function getProjectConfigPath(projectRoot = process.cwd()) {
   return path.join(projectRoot, CONFIG_FILENAME);
 }
 
+function getConfigPath(isPackaged, userDataPath, workingDirectory) {
+  if (!isPackaged) return getProjectConfigPath(workingDirectory);
+  if (!userDataPath || !path.isAbsolute(userDataPath)) {
+    throw new ProjectConfigError("Unable to locate user data directory", CONFIG_FILENAME);
+  }
+  return getProjectConfigPath(userDataPath);
+}
+
 function assertString(config, field, filePath) {
   if (config[field] !== undefined && typeof config[field] !== "string") {
     throw new ProjectConfigError(`Field "${field}" must be a string`, filePath);
@@ -123,6 +131,7 @@ module.exports = {
   ProjectConfigError,
   SUPPORTED_LANGUAGES,
   SUPPORTED_PROVIDERS,
+  getConfigPath,
   getProjectConfigPath,
   mergeConfigs,
   readProjectConfig,
